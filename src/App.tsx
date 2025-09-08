@@ -9,6 +9,7 @@ import { StudentDashboard } from './pages/student/StudentDashboard';
 import { ReportIncident } from './pages/student/ReportIncident';
 import { CommunityFeed } from './pages/student/CommunityFeed';
 import { UserProfile } from './pages/student/UserProfile';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
 export function App() {
   return <Router>
       <Routes>
@@ -22,7 +23,7 @@ export function App() {
         </Route>
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
-        
+          <Route index element={<AdminDashboard/>} />
         </Route>
         <Route path="/" element={<Navigate to="/student/login" replace />} />
       </Routes>
