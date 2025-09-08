@@ -466,7 +466,7 @@ export function StudentDashboard() {
           )}
         </div>
       </div>
-      <style jsx>{`
+      <style>{`
         .custom-marker-dashboard {
           background: transparent !important;
           border: none !important;

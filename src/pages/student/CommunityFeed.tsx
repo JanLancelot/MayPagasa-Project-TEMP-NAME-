@@ -715,7 +715,7 @@ export function CommunityFeed() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .custom-marker {
           background: transparent !important;
           border: none !important;
