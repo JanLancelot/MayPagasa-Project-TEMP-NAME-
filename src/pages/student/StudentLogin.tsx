@@ -2,7 +2,6 @@ import React, { useState, FC, ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 
-// Import sendPasswordResetEmail from firebase
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../firebase';
 
@@ -14,12 +13,12 @@ export const StudentLogin: FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [resetMessage, setResetMessage] = useState<string>(''); // State for the confirmation message
+  const [resetMessage, setResetMessage] = useState<string>('');
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    setResetMessage(''); // Clear any previous reset messages
+    setResetMessage('');
 
     if (!email || !password) {
       return setError('Please enter both email and password.');
@@ -47,7 +46,6 @@ export const StudentLogin: FC = () => {
     }
   };
 
-  // Function to handle the password reset request
   const handleForgotPassword = async () => {
     setError('');
     setResetMessage('');
@@ -126,7 +124,6 @@ export const StudentLogin: FC = () => {
                   Remember me
                 </label>
               </div>
-              {/* Updated to a button to trigger the handler */}
               <button 
                 type="button" 
                 onClick={handleForgotPassword} 

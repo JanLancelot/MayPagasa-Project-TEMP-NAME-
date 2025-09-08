@@ -14,10 +14,11 @@ import {
   Users,
   AlertTriangle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-import { auth, db } from "../../firebase";
+import { auth, db, storage } from "../../firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
   collection,
@@ -26,15 +27,25 @@ import {
   orderBy,
   doc,
   updateDoc,
+  deleteDoc,
   arrayUnion,
   increment,
   GeoPoint,
   Timestamp,
 } from "firebase/firestore";
+import { ref, deleteObject } from "firebase/storage";
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+interface StudentData {
+  address: {
+    barangay: string;
+    city: string;
+    province: string;
+  };
+}
 
 interface IncidentReport {
   id: string;
@@ -57,9 +68,21 @@ interface IncidentReport {
   disputers?: string[];
   disputes?: number;
   resolvers?: string[];
+  specificLocation?: {
+    province: string;
+    city: string;
+    barangay: string;
+    street?: string;
+    landmark?: string;
+    psgc: {
+      provinceCode: string;
+      cityCode: string;
+      barangayCode: string;
+    };
+  };
 }
 
-const VERIFICATION_THRESHOLD = 1; 
+const VERIFICATION_THRESHOLD = 1;
 const DISPUTE_THRESHOLD = 1;
 const RESOLVED_THRESHOLD = 1;
 
@@ -131,8 +154,48 @@ const getIconSymbol = (type: string): string => {
   }
 };
 
+const getLocationString = (incident: IncidentReport): string => {
+  if (incident.specificLocation) {
+    const parts = [
+      incident.specificLocation.barangay,
+      incident.specificLocation.city,
+      incident.specificLocation.province,
+    ].filter(Boolean);
+    if (parts.length > 0) return parts.join(", ");
+  }
+  const reporterAddress = incident.reporterInfo.address;
+  if (reporterAddress) {
+    const parts = [
+      reporterAddress.barangay,
+      reporterAddress.city,
+      reporterAddress.province,
+    ].filter(Boolean);
+    if (parts.length > 0) return parts.join(", ");
+  }
+  return "Location not specified";
+};
+
+const getDetailedLocationString = (incident: IncidentReport): string => {
+  const baseLocation = getLocationString(incident);
+  if (incident.specificLocation) {
+    const additionalDetails = [];
+    if (incident.specificLocation.street) {
+      additionalDetails.push(incident.specificLocation.street);
+    }
+    if (incident.specificLocation.landmark) {
+      additionalDetails.push(`near ${incident.specificLocation.landmark}`);
+    }
+    if (additionalDetails.length > 0) {
+      return `${additionalDetails.join(", ")}, ${baseLocation}`;
+    }
+  }
+  return baseLocation;
+};
+
 export function CommunityFeed() {
   const [user, authLoading] = useAuthState(auth);
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [loadingStudentData, setLoadingStudentData] = useState(true);
 
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [loadingIncidents, setLoadingIncidents] = useState(true);
@@ -144,6 +207,27 @@ export function CommunityFeed() {
     useState<IncidentReport | null>(null);
   const [disputeModal, setDisputeModal] = useState<IncidentReport | null>(null);
   const [resolveModal, setResolveModal] = useState<IncidentReport | null>(null);
+  const [deleteModalData, setDeleteModalData] = useState<IncidentReport | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!user) {
+      setLoadingStudentData(false);
+      return;
+    }
+    setLoadingStudentData(true);
+    const userDocRef = doc(db, "students", user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setStudentData(docSnap.data() as StudentData);
+      } else {
+        setStudentData(null);
+      }
+      setLoadingStudentData(false);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     setLoadingIncidents(true);
@@ -167,7 +251,6 @@ export function CommunityFeed() {
         setLoadingIncidents(false);
       }
     );
-
     return () => unsubscribe();
   }, []);
 
@@ -240,12 +323,9 @@ export function CommunityFeed() {
     if (incident.verifications.length + 1 >= VERIFICATION_THRESHOLD) {
       updateData.status = "verified";
     }
-    try {
-      await updateDoc(reportRef, updateData);
-    } catch (error) {
-      console.error("Error verifying report: ", error);
-      alert("Failed to verify report.");
-    }
+    await updateDoc(reportRef, updateData).catch((error) =>
+      console.error("Error verifying report: ", error)
+    );
   };
 
   const handleDispute = async (incident: IncidentReport) => {
@@ -260,12 +340,9 @@ export function CommunityFeed() {
     if (currentDisputes + 1 >= DISPUTE_THRESHOLD) {
       updateData.status = "disputed";
     }
-    try {
-      await updateDoc(reportRef, updateData);
-    } catch (error) {
-      console.error("Error disputing report: ", error);
-      alert("Failed to dispute report.");
-    }
+    await updateDoc(reportRef, updateData).catch((error) =>
+      console.error("Error disputing report: ", error)
+    );
   };
 
   const handleResolve = async (incident: IncidentReport) => {
@@ -277,38 +354,57 @@ export function CommunityFeed() {
     if (currentResolversCount + 1 >= RESOLVED_THRESHOLD) {
       updateData.status = "resolved";
     }
+    await updateDoc(reportRef, updateData).catch((error) =>
+      console.error("Error resolving report: ", error)
+    );
+  };
+
+  const handleDelete = async (incident: IncidentReport) => {
+    if (!user) return;
+    if (incident.imageUrl) {
+      const imageRef = ref(storage, incident.imageUrl);
+      try {
+        await deleteObject(imageRef);
+      } catch (error) {
+        console.error("Error deleting image from storage: ", error);
+      }
+    }
     try {
-      await updateDoc(reportRef, updateData);
+      await deleteDoc(doc(db, "reports", incident.id));
+      setDeleteModalData(null);
     } catch (error) {
-      console.error("Error resolving report: ", error);
-      alert("Failed to mark report as resolved.");
+      console.error("Error deleting report document: ", error);
+      alert("Failed to delete report.");
     }
   };
 
-  const filteredIncidents = useMemo(() => {
-    return filter === "all"
-      ? incidents
-      : incidents.filter(
-          (incident) => incident.incidentType.toLowerCase() === filter
+  const filteredIncidents = useMemo(
+    () =>
+      incidents.filter(
+        (incident) =>
+          filter === "all" || incident.incidentType.toLowerCase() === filter
+      ),
+    [incidents, filter]
+  );
+
+  const sortedIncidents = useMemo(
+    () =>
+      [...filteredIncidents].sort((a, b) => {
+        const statusOrder = {
+          pending: 1,
+          verified: 2,
+          disputed: 3,
+          resolved: 4,
+        };
+        return (
+          statusOrder[a.status] - statusOrder[b.status] ||
+          b.createdAt.toMillis() - a.createdAt.toMillis()
         );
-  }, [incidents, filter]);
+      }),
+    [filteredIncidents]
+  );
 
-  const sortedIncidents = useMemo(() => {
-    return [...filteredIncidents].sort((a, b) => {
-      const statusOrder = {
-        pending: 1,
-        verified: 2,
-        disputed: 3,
-        resolved: 4,
-      };
-      return (
-        statusOrder[a.status] - statusOrder[b.status] ||
-        b.createdAt.toMillis() - a.createdAt.toMillis()
-      );
-    });
-  }, [filteredIncidents]);
-
-  if (authLoading) {
+  if (authLoading || loadingStudentData) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin text-[#0B1F8C]" size={48} />
@@ -396,81 +492,75 @@ export function CommunityFeed() {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 />
-                {sortedIncidents.map((incident) => {
-                  const address = incident.reporterInfo.address;
-                  const locationString =
-                    [address?.barangay, address?.city, address?.province]
-                      .filter(Boolean)
-                      .join(", ") || "Location not specified";
-
-                  return (
-                    <Marker
-                      key={incident.id}
-                      position={[
-                        incident.location.latitude,
-                        incident.location.longitude,
-                      ]}
-                      icon={createCustomMarker(
-                        incident.incidentType,
-                        incident.imageUrl,
-                        incident.status
-                      )}
-                    >
-                      <Popup maxWidth={300} className="custom-popup">
-                        <div className="p-2">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-2">
-                              {getIncidentIcon(incident.incidentType, 16)}
-                              <h3 className="font-semibold capitalize text-gray-800">
-                                {incident.incidentType}
-                              </h3>
-                            </div>
-                            {getStatusBadge(incident)}
+                {sortedIncidents.map((incident) => (
+                  <Marker
+                    key={incident.id}
+                    position={[
+                      incident.location.latitude,
+                      incident.location.longitude,
+                    ]}
+                    icon={createCustomMarker(
+                      incident.incidentType,
+                      incident.imageUrl,
+                      incident.status
+                    )}
+                  >
+                    <Popup maxWidth={300} className="custom-popup">
+                      <div className="p-2">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-2">
+                            {getIncidentIcon(incident.incidentType, 16)}
+                            <h3 className="font-semibold capitalize text-gray-800">
+                              {incident.incidentType}
+                            </h3>
                           </div>
-                          {incident.imageUrl && (
-                            <div className="mb-3">
-                              <img
-                                src={incident.imageUrl}
-                                alt={incident.incidentType}
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
-                            </div>
-                          )}
-                          <p className="text-sm text-gray-700 mb-2 line-clamp-3">
-                            {incident.description}
-                          </p>
-                          <div className="text-xs text-gray-500 space-y-1">
-                            <div className="flex items-center gap-1">
-                              <MapPin size={12} />
-                              <span>{locationString}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock size={12} />
-                              <span>
-                                {formatDistanceToNow(
-                                  incident.createdAt.toDate(),
-                                  { addSuffix: true }
-                                )}
-                              </span>
-                            </div>
+                          {getStatusBadge(incident)}
+                        </div>
+                        {incident.imageUrl && (
+                          <div className="mb-3">
+                            <img
+                              src={incident.imageUrl}
+                              alt={incident.incidentType}
+                              className="w-full h-32 object-cover rounded-lg"
+                            />
                           </div>
-                          <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
-                            Reported by:{" "}
-                            <span className="font-medium">
-                              {incident.reporterInfo.fullName}
+                        )}
+                        <p className="text-sm text-gray-700 mb-2 line-clamp-3">
+                          {incident.description}
+                        </p>
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <div className="flex items-center gap-1">
+                            <MapPin size={12} />
+                            <span className="line-clamp-2">
+                              {getDetailedLocationString(incident)}
                             </span>
                           </div>
-                          {incident.verifications.length > 0 && (
-                            <div className="mt-1 text-xs text-gray-500">
-                              {incident.verifications.length} verification
-                              {incident.verifications.length !== 1 ? "s" : ""}
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1">
+                            <Clock size={12} />
+                            <span>
+                              {formatDistanceToNow(
+                                incident.createdAt.toDate(),
+                                { addSuffix: true }
+                              )}
+                            </span>
+                          </div>
                         </div>
-                      </Popup>
-                    </Marker>
-                  );
-                })}
+                        <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                          Reported by:{" "}
+                          <span className="font-medium">
+                            {incident.reporterInfo.fullName}
+                          </span>
+                        </div>
+                        {incident.verifications.length > 0 && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            {incident.verifications.length} verification
+                            {incident.verifications.length !== 1 ? "s" : ""}
+                          </div>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
               </MapContainer>
             </div>
           )}
@@ -485,12 +575,9 @@ export function CommunityFeed() {
                 const hasResolved =
                   user && incident.resolvers?.includes(user.uid);
                 const isReporter = user && incident.reporterId === user.uid;
-
-                const address = incident.reporterInfo.address;
-                const locationString =
-                  [address?.barangay, address?.city, address?.province]
-                    .filter(Boolean)
-                    .join(", ") || "Location not specified";
+                const canInteract =
+                  studentData?.address?.barangay ===
+                  incident.specificLocation?.barangay;
 
                 return (
                   <div
@@ -527,9 +614,11 @@ export function CommunityFeed() {
                       <p className="text-sm text-gray-700 mt-2">
                         {incident.description}
                       </p>
-                      <div className="mt-3 text-sm text-gray-500 flex items-center gap-1">
-                        <MapPin size={14} />
-                        <span>{locationString}</span>
+                      <div className="mt-3 text-sm text-gray-500 flex items-start gap-1">
+                        <MapPin size={14} className="mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">
+                          {getDetailedLocationString(incident)}
+                        </span>
                       </div>
                       <div className="mt-1 text-xs text-gray-400 flex items-center gap-1">
                         <Clock size={12} />
@@ -544,68 +633,76 @@ export function CommunityFeed() {
                           Reported by: {incident.reporterInfo.fullName}
                         </span>
                       </div>
-
-                      {user && !isReporter && (
-                        <div className="mt-4">
-                          {incident.status === "pending" &&
-                            (() => {
-                              if (hasVerified) {
-                                return (
-                                  <div className="p-2 bg-green-50 rounded-lg text-sm text-center text-green-700">
-                                    You've verified this report.
-                                  </div>
-                                );
-                              }
-                              if (hasDisputed) {
-                                return (
-                                  <div className="p-2 bg-red-50 rounded-lg text-sm text-center text-red-700">
-                                    You've disputed this report.
-                                  </div>
-                                );
-                              }
-                              return (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() =>
-                                      setVerificationModal(incident)
-                                    }
-                                    className="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-1"
-                                  >
-                                    <ThumbsUp size={16} />
-                                    <span>Verify</span>
-                                  </button>
-                                  <button
-                                    onClick={() => setDisputeModal(incident)}
-                                    className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-1"
-                                  >
-                                    <Flag size={16} />
-                                    <span>Dispute</span>
-                                  </button>
-                                </div>
-                              );
-                            })()}
-
-                          {incident.status === "verified" &&
-                            (() => {
-                              if (hasResolved) {
-                                return (
-                                  <div className="p-2 bg-blue-50 rounded-lg text-sm text-center text-blue-700">
-                                    You've marked this as resolved.
-                                  </div>
-                                );
-                              }
-                              return (
-                                <button
-                                  onClick={() => setResolveModal(incident)}
-                                  className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition flex items-center justify-center gap-1"
-                                >
-                                  <CheckCircle size={16} />
-                                  <span>Mark as Resolved</span>
-                                </button>
-                              );
-                            })()}
-                        </div>
-                      )}
+                      <div className="mt-4">
+                        {user &&
+                          (isReporter ? (
+                            <button
+                              onClick={() => setDeleteModalData(incident)}
+                              className="w-full bg-red-100 text-red-800 py-2 rounded-lg hover:bg-red-200 transition flex items-center justify-center gap-1"
+                            >
+                              <Trash2 size={16} />
+                              <span>Delete</span>
+                            </button>
+                          ) : canInteract ? (
+                            <>
+                              {incident.status === "pending" &&
+                                (() => {
+                                  if (hasVerified)
+                                    return (
+                                      <div className="p-2 bg-green-50 rounded-lg text-sm text-center text-green-700">
+                                        You've verified this report.
+                                      </div>
+                                    );
+                                  if (hasDisputed)
+                                    return (
+                                      <div className="p-2 bg-red-50 rounded-lg text-sm text-center text-red-700">
+                                        You've disputed this report.
+                                      </div>
+                                    );
+                                  return (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() =>
+                                          setVerificationModal(incident)
+                                        }
+                                        className="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-1"
+                                      >
+                                        <ThumbsUp size={16} />
+                                        <span>Verify</span>
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          setDisputeModal(incident)
+                                        }
+                                        className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-1"
+                                      >
+                                        <Flag size={16} />
+                                        <span>Dispute</span>
+                                      </button>
+                                    </div>
+                                  );
+                                })()}
+                              {incident.status === "verified" &&
+                                (() => {
+                                  if (hasResolved)
+                                    return (
+                                      <div className="p-2 bg-blue-50 rounded-lg text-sm text-center text-blue-700">
+                                        You've marked this as resolved.
+                                      </div>
+                                    );
+                                  return (
+                                    <button
+                                      onClick={() => setResolveModal(incident)}
+                                      className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition flex items-center justify-center gap-1"
+                                    >
+                                      <CheckCircle size={16} />
+                                      <span>Mark as Resolved</span>
+                                    </button>
+                                  );
+                                })()}
+                            </>
+                          ) : null)}
+                      </div>
                     </div>
                   </div>
                 );
@@ -715,28 +812,40 @@ export function CommunityFeed() {
         </div>
       )}
 
+      {deleteModalData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">
+              Delete Report
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete this report? This
+              action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDelete(deleteModalData)}
+                className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition"
+              >
+                Confirm Delete
+              </button>
+              <button
+                onClick={() => setDeleteModalData(null)}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
-        .custom-marker {
-          background: transparent !important;
-          border: none !important;
-        }
-        .custom-popup .leaflet-popup-content-wrapper {
-          border-radius: 12px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-        .custom-popup .leaflet-popup-content {
-          margin: 0;
-          line-height: 1.4;
-        }
-        .custom-popup .leaflet-popup-tip {
-          background: white;
-        }
-        .line-clamp-3 {
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
+        .custom-marker { background: transparent !important; border: none !important; }
+        .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); }
+        .custom-popup .leaflet-popup-content { margin: 0; line-height: 1.4; }
+        .custom-popup .leaflet-popup-tip { background: white; }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       `}</style>
     </div>
   );

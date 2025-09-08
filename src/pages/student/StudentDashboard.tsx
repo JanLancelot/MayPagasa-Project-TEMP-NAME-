@@ -10,6 +10,8 @@ import {
   CheckCircle,
   Loader2,
   User,
+  XCircle,
+  Archive,
 } from "lucide-react";
 import { VerificationRequest } from "../../components/VerificationRequest";
 
@@ -32,12 +34,35 @@ import {
 
 import { formatDistanceToNow } from "date-fns";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl,
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  tooltipAnchor: [16, -28],
+  shadowSize: [41, 41],
+});
+
 interface StudentData {
   fullName: string;
+  address: {
+    barangay: string;
+    city: string;
+    province: string;
+    street: string;
+  };
 }
 
 interface Report {
@@ -58,7 +83,50 @@ interface Report {
   createdAt: Timestamp;
   imageUrl?: string;
   verifications: string[];
+  specificLocation?: {
+    region: string;
+    province: string;
+    city: string;
+    barangay: string;
+    street?: string;
+  };
 }
+
+const StatusBadge = ({ status }: { status: Report["status"] }) => {
+  const statusConfig = {
+    verified: {
+      text: "Verified",
+      icon: <CheckCircle size={12} />,
+      className: "bg-green-100 text-green-800",
+    },
+    pending: {
+      text: "Pending",
+      icon: <Clock size={12} />,
+      className: "bg-yellow-100 text-yellow-800",
+    },
+    disputed: {
+      text: "Disputed",
+      icon: <XCircle size={12} />,
+      className: "bg-red-100 text-red-800",
+    },
+    resolved: {
+      text: "Resolved",
+      icon: <Archive size={12} />,
+      className: "bg-gray-100 text-gray-800",
+    },
+  };
+
+  const config = statusConfig[status] || statusConfig.pending;
+
+  return (
+    <span
+      className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${config.className}`}
+    >
+      {config.icon}
+      <span>{config.text}</span>
+    </span>
+  );
+};
 
 const getIconSymbol = (type: string): string => {
   switch (type.toLowerCase()) {
@@ -98,6 +166,7 @@ const createCustomMarker = (
   if (status === "verified") ringColor = "#10B981";
   else if (status === "disputed") ringColor = "#EF4444";
   else if (status === "pending") ringColor = "#F59E0B";
+  else if (status === "resolved") ringColor = "#6B7280";
 
   const svgIcon = `
     <div style="position: relative; width: 48px; height: 48px;">
@@ -125,6 +194,19 @@ const createCustomMarker = (
   });
 };
 
+interface ChangeViewProps {
+  center: [number, number];
+  zoom: number;
+}
+
+function ChangeView({ center, zoom }: ChangeViewProps) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [map, center, zoom]);
+  return null;
+}
+
 export function StudentDashboard() {
   const [user, authLoading] = useAuthState(auth);
   const [studentData, setStudentData] = useState<StudentData | null>(null);
@@ -134,6 +216,35 @@ export function StudentDashboard() {
   const [recentIncidents, setRecentIncidents] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [mapCenter, setMapCenter] = useState<[number, number]>([
+    14.7915, 120.9425,
+  ]);
+  const [userPosition, setUserPosition] = useState<[number, number] | null>(
+    null
+  );
+  const [isLocating, setIsLocating] = useState(true);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const newPos: [number, number] = [latitude, longitude];
+          setMapCenter(newPos);
+          setUserPosition(newPos);
+          setIsLocating(false);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    } else {
+      setIsLocating(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       if (!authLoading) setLoading(false);
@@ -142,23 +253,19 @@ export function StudentDashboard() {
 
     setLoading(true);
     const userDocRef = doc(db, "students", user.uid);
-    getDoc(userDocRef).then(
-      (docSnap) =>
-        docSnap.exists() && setStudentData(docSnap.data() as StudentData)
-    );
-
-    const requestsQuery = query(
-      collection(db, "reports"),
-      where("status", "==", "pending"),
-      where("reporterId", "!=", user.uid)
-    );
-    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-      const requests = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() } as Report))
-        .filter((report) => !report.verifications.includes(user.uid));
-      setVerificationRequests(requests);
-      setLoading(false);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setStudentData(docSnap.data() as StudentData);
+      } else {
+        setStudentData(null);
+      }
     });
+
+    return () => unsubscribe();
+  }, [user, authLoading]);
+
+  useEffect(() => {
+    if (!user) return;
 
     const recentQuery = query(
       collection(db, "reports"),
@@ -170,14 +277,42 @@ export function StudentDashboard() {
         (doc) => ({ id: doc.id, ...doc.data() } as Report)
       );
       setRecentIncidents(incidents);
-      setLoading(false);
+      if (loading) setLoading(false);
+    });
+
+    if (!studentData?.address?.barangay) {
+      setVerificationRequests([]);
+      return () => {
+        unsubscribeRecent();
+      };
+    }
+
+    const studentBarangay = studentData.address.barangay;
+
+    const requestsQuery = query(
+      collection(db, "reports"),
+      where("status", "==", "pending"),
+      where("reporterId", "!=", user.uid),
+      where("specificLocation.barangay", "==", studentBarangay)
+    );
+
+    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+      const requests = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() } as Report))
+        .filter((report) => !report.verifications.includes(user.uid));
+      setVerificationRequests(requests);
+      if (loading) setLoading(false);
     });
 
     return () => {
-      unsubscribeRequests();
       unsubscribeRecent();
+      unsubscribeRequests();
     };
-  }, [user, authLoading]);
+  }, [user, studentData]);
+
+  const activeIncidents = recentIncidents.filter(
+    (incident) => incident.status !== "resolved"
+  );
 
   const handleVerificationAction = async (reportId: string) => {
     if (!user) return;
@@ -197,11 +332,9 @@ export function StudentDashboard() {
           await updateDoc(reportRef, { status: "verified" });
         }
       }
-      console.log("Action recorded successfully! Thank you for your feedback.");
     } catch (error) {
       console.error("Error updating document: ", error);
       alert("Failed to record action. Please try again.");
-
     }
   };
 
@@ -226,6 +359,26 @@ export function StudentDashboard() {
       day: "numeric",
     });
 
+  const formatIncidentLocation = (report: Report): string => {
+    if (report.specificLocation) {
+      return [
+        report.specificLocation.street,
+        report.specificLocation.barangay,
+        report.specificLocation.city,
+        report.specificLocation.province,
+      ]
+        .filter(Boolean)
+        .join(", ");
+    }
+    return [
+      report.reporterInfo.address.barangay,
+      report.reporterInfo.address.city,
+      report.reporterInfo.address.province,
+    ]
+      .filter(Boolean)
+      .join(", ");
+  };
+
   if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center h-full p-10">
@@ -243,10 +396,13 @@ export function StudentDashboard() {
         <p className="text-gray-500">{getTodayDate()}</p>
       </div>
 
-      {verificationRequests.length > 0 && (
+      {verificationRequests.length > 0 && studentData?.address?.barangay && (
         <div className="mb-8">
           <h2 className="text-lg font-bold text-gray-800 mb-3">
-            Verification Requests
+            Verification Requests in{" "}
+            <span className="text-[#0B1F8C]">
+              {studentData.address.barangay}
+            </span>
           </h2>
           {verificationRequests.map((request) => (
             <VerificationRequest
@@ -254,7 +410,7 @@ export function StudentDashboard() {
               report={{
                 id: request.id,
                 type: request.incidentType,
-                location: `${request.reporterInfo.address.barangay}, ${request.reporterInfo.address.city}`,
+                location: formatIncidentLocation(request),
                 time: formatDistanceToNow(request.createdAt.toDate(), {
                   addSuffix: true,
                 }),
@@ -321,17 +477,31 @@ export function StudentDashboard() {
           </Link>
         </div>
         <div className="bg-white rounded-xl shadow overflow-hidden h-80 relative">
+          {isLocating && (
+            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+              <Loader2 className="animate-spin text-[#0B1F8C]" size={32} />
+              <span className="ml-2 text-gray-600">
+                Finding your location...
+              </span>
+            </div>
+          )}
           <MapContainer
-            center={[14.7915, 120.9425]}
+            center={mapCenter}
             zoom={13}
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={false}
           >
+            <ChangeView center={mapCenter} zoom={13} />
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
-            {recentIncidents.map(
+            {userPosition && (
+              <Marker position={userPosition}>
+                <Popup>You are here</Popup>
+              </Marker>
+            )}
+            {activeIncidents.map(
               (incident) =>
                 incident.location && (
                   <Marker
@@ -348,9 +518,12 @@ export function StudentDashboard() {
                   >
                     <Popup maxWidth={250}>
                       <div className="p-1">
-                        <h3 className="font-semibold capitalize text-gray-800 mb-1">
-                          {incident.incidentType}
-                        </h3>
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="font-semibold capitalize text-gray-800">
+                            {incident.incidentType}
+                          </h3>
+                          <StatusBadge status={incident.status} />
+                        </div>
                         {incident.imageUrl && (
                           <img
                             src={incident.imageUrl}
@@ -364,8 +537,13 @@ export function StudentDashboard() {
                         <div className="text-xs text-gray-500 flex items-center gap-1">
                           <MapPin size={12} />
                           <span>
-                            {incident.reporterInfo.address.barangay},{" "}
-                            {incident.reporterInfo.address.city}
+                            {[
+                              incident.specificLocation?.street,
+                              incident.specificLocation?.barangay,
+                              incident.specificLocation?.city,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
@@ -388,9 +566,9 @@ export function StudentDashboard() {
       <div>
         <h2 className="text-lg font-bold text-gray-800 mb-3">Recent Reports</h2>
         <div className="bg-white rounded-xl shadow overflow-hidden">
-          {recentIncidents.length > 0 ? (
+          {activeIncidents.length > 0 ? (
             <div className="divide-y divide-gray-100">
-              {recentIncidents.slice(0, 5).map((incident) => (
+              {activeIncidents.slice(0, 5).map((incident) => (
                 <div key={incident.id}>
                   {incident.imageUrl && (
                     <img
@@ -415,36 +593,13 @@ export function StudentDashboard() {
                           </div>
                         </div>
                       </div>
-                      <span
-                        className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          incident.status === "verified"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {incident.status === "verified" ? (
-                          <div className="flex items-center gap-1">
-                            <CheckCircle size={12} />
-                            <span>Verified</span>
-                          </div>
-                        ) : (
-                          <span>Pending</span>
-                        )}
-                      </span>
+                      <StatusBadge status={incident.status} />
                     </div>
 
                     <div className="text-sm text-gray-500 space-y-1 mt-3">
                       <div className="flex items-center gap-1.5">
                         <MapPin size={14} />
-                        <span>
-                          {[
-                            incident.reporterInfo.address.barangay,
-                            incident.reporterInfo.address.city,
-                            incident.reporterInfo.address.province,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </span>
+                        <span>{formatIncidentLocation(incident)}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Clock size={14} />
@@ -461,7 +616,7 @@ export function StudentDashboard() {
             </div>
           ) : (
             <div className="p-6 text-center text-gray-500">
-              <p>No recent reports found.</p>
+              <p>No active reports found.</p>
             </div>
           )}
         </div>
