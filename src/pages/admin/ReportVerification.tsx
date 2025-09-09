@@ -65,7 +65,7 @@ export function ReportVerification() {
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Report Verification</h1>
         <p className="text-gray-500">Review, approve, or reject submitted reports</p>
-        <p className="text-red-500">Don't use the approve/reject button, I'll clarify this later | will also fix responsiveness later</p>
+        <p className="text-red-500">Don't use the approve/reject button, I'll clarify this later | will also fix and improve design responsiveness later</p>
       </div>
 
       <div className="bg-white rounded-xl shadow divide-y divide-gray-100">
