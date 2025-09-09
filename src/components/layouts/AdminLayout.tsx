@@ -39,7 +39,6 @@ export function AdminLayout() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar (Desktop) */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -85,9 +84,7 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex flex-col flex-1">
-        {/* Mobile Header */}
         <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between md:hidden sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <img
@@ -105,7 +102,6 @@ export function AdminLayout() {
           </button>
         </header>
 
-        {/* Mobile Sidebar */}
         {isMobileMenuOpen && (
           <div className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50">
             <div className="absolute top-0 left-0 w-64 h-full bg-white shadow-lg">
@@ -162,7 +158,6 @@ export function AdminLayout() {
           </div>
         )}
 
-        {/* Page Content */}
         <main className="flex-1 p-4 md:p-6 overflow-auto">
           <Outlet />
         </main>
