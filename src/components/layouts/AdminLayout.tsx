@@ -20,7 +20,7 @@ export function AdminLayout() {
     label: 'Users',
     path: '/admin/users'
   }];
-  return <div className="flex min-h-screen bg-gray-50">
+  return <div className="flex h-screen bg-gray-50">
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">

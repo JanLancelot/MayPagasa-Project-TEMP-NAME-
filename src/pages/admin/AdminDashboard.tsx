@@ -8,6 +8,7 @@ import {
   Clock,
   Users,
   MapPin,
+  LayoutDashboard,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -25,8 +26,7 @@ interface Report {
     address: { barangay: string; city: string; province?: string };
   };
   imageUrl?: string;
-  lat?: number; // 👈 make sure you save lat/lng in Firestore
-  lng?: number;
+  location?: { latitude: number; longitude: number };
 }
 
 export function AdminDashboard() {
@@ -36,6 +36,8 @@ export function AdminDashboard() {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [verifiedCount, setVerifiedCount] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<"list" | "map">("list");
+  const [resolvedCount, setResolvedCount] = useState<number>(0);
+  const [disputedCount, setDisputedCount] = useState<number>(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,12 +52,12 @@ export function AdminDashboard() {
       const reportsData = reportsSnap.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Report)
       );
-      setReports(reportsData);
+       setReports(reportsData);
 
       setPendingCount(reportsData.filter((r) => r.status === "pending").length);
-      setVerifiedCount(
-        reportsData.filter((r) => r.status === "verified").length
-      );
+      setVerifiedCount(reportsData.filter((r) => r.status === "verified").length);
+      setResolvedCount(reportsData.filter((r) => r.status === "resolved").length);
+      setDisputedCount(reportsData.filter((r) => r.status === "disputed").length);
 
       const usersSnap = await getDocs(collection(db, "students"));
       setTotalUsers(usersSnap.size);
@@ -99,28 +101,12 @@ export function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white shadow rounded-xl p-6 flex items-center gap-4">
-          <Users className="text-blue-600" size={32} />
-          <div>
-            <p className="text-gray-500 text-sm">Total Users</p>
-            <h3 className="text-xl font-bold">{totalUsers}</h3>
-          </div>
-        </div>
-        <div className="bg-white shadow rounded-xl p-6 flex items-center gap-4">
-          <AlertTriangle className="text-yellow-500" size={32} />
-          <div>
-            <p className="text-gray-500 text-sm">Pending Reports</p>
-            <h3 className="text-xl font-bold">{pendingCount}</h3>
-          </div>
-        </div>
-        <div className="bg-white shadow rounded-xl p-6 flex items-center gap-4">
-          <CheckCircle className="text-green-600" size={32} />
-          <div>
-            <p className="text-gray-500 text-sm">Verified Reports</p>
-            <h3 className="text-xl font-bold">{verifiedCount}</h3>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <StatCard icon={<Users className="text-blue-600" size={28} />} label="Total Users" value={totalUsers} />
+        <StatCard icon={<AlertTriangle className="text-yellow-500" size={28} />} label="Pending" value={pendingCount} />
+        <StatCard icon={<CheckCircle className="text-green-600" size={28} />} label="Verified" value={verifiedCount} />
+        <StatCard icon={<Clock className="text-blue-600" size={28} />} label="Resolved" value={resolvedCount} />
+        <StatCard icon={<LayoutDashboard className="text-red-600" size={28} />} label="Disputed" value={disputedCount} />
       </div>
 
       {/* Tabs */}
@@ -142,6 +128,7 @@ export function AdminDashboard() {
           Report Map
         </button>
       </div>
+      
 
       {/* Tab Content */}
       {activeTab === "list" ? (
@@ -247,6 +234,18 @@ export function AdminDashboard() {
     </MapContainer>
         </div>
       )}
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <div className="bg-white shadow rounded-xl p-4 flex items-center gap-4">
+      {icon}
+      <div>
+        <p className="text-gray-500 text-sm">{label}</p>
+        <h3 className="text-xl font-bold">{value}</h3>
+      </div>
     </div>
   );
 }
