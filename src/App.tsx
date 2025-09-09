@@ -10,6 +10,7 @@ import { ReportIncident } from './pages/student/ReportIncident';
 import { CommunityFeed } from './pages/student/CommunityFeed';
 import { UserProfile } from './pages/student/UserProfile';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { ReportVerification } from './pages/admin/ReportVerification';
 export function App() {
   return <Router>
       <Routes>
@@ -22,8 +23,10 @@ export function App() {
           <Route path="profile" element={<UserProfile />} />
         </Route>
         <Route path="/admin/login" element={<AdminLogin />} />
+        {/* TBA: add admin verification function to avoid access from non-admin*/}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard/>} />
+          <Route path='/admin/reports' element={<ReportVerification/>} />
         </Route>
         <Route path="/" element={<Navigate to="/student/login" replace />} />
       </Routes>
