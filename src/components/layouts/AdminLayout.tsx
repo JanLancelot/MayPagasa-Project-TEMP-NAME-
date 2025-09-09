@@ -64,7 +64,7 @@ export function AdminLayout() {
             <div className="absolute top-0 left-0 w-64 h-full bg-white">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src="https://i.ibb.co/kBZ5kNt/dyci-logo.png" alt="DYCI Logo" className="h-8" />
+                  <img src="https://dyci.edu.ph/assets/logo/dyci-logo.webp" alt="DYCI Logo" className="h-8" />
                   <div>
                     <h1 className="font-bold text-[#0B1F8C]">MayPagAsa</h1>
                     <p className="text-xs text-gray-500">Admin Portal</p>
