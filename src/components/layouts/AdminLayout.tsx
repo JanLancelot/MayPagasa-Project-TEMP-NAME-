@@ -24,7 +24,7 @@ export function AdminLayout() {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <img src="https://dyci.edu.ph/assets/logo/dyci-logo.webp" alt="DYCI Logo" className="h-8" />
+            <img src="https://dyci.edu.ph/assets/logo/dyci-logo.webp" alt="DYCI Logo" className="h-10" />
             <div>
               <h1 className="font-bold text-[#0B1F8C]">MayPagAsa</h1>
               <p className="text-xs text-gray-500">Admin Portal</p>
@@ -53,7 +53,7 @@ export function AdminLayout() {
       <div className="flex flex-col flex-1">
         <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between md:hidden">
           <div className="flex items-center gap-2">
-            <img src="https://i.ibb.co/kBZ5kNt/dyci-logo.png" alt="DYCI Logo" className="h-8" />
+            <img src="https://dyci.edu.ph/assets/logo/dyci-logo.webp" alt="DYCI Logo" className="h-8" />
             <h1 className="font-bold text-[#0B1F8C]">MayPagAsa</h1>
           </div>
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-700">
