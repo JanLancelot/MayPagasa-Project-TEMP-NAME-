@@ -147,7 +147,7 @@ const getIconSymbol = (type: string): string => {
   }
 };
 
-const createCustomMarker = (
+export const createCustomMarker = (
   incidentType: string,
   imageUrl?: string,
   status?: string
