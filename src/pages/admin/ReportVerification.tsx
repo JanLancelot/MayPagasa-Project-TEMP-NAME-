@@ -142,6 +142,12 @@ export function ReportVerification() {
                   >
                     <XCircle size={14} /> Reject
                   </button>
+                                    <button
+                    onClick={() => handleStatusChange(r.id, "resolved")}
+                    className="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded flex items-center gap-1"
+                  >
+                    <XCircle size={14} /> Resolved
+                  </button>
                 </div>
               </div>
             </div>
