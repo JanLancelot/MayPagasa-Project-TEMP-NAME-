@@ -11,6 +11,8 @@ import { CommunityFeed } from './pages/student/CommunityFeed';
 import { UserProfile } from './pages/student/UserProfile';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ReportVerification } from './pages/admin/ReportVerification';
+import { Analytics } from './pages/admin/Analytics';
+
 export function App() {
   return <Router>
       <Routes>
@@ -27,6 +29,7 @@ export function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard/>} />
           <Route path='/admin/reports' element={<ReportVerification/>} />
+          <Route path='/admin/analytics' element={<Analytics/>} />
         </Route>
         <Route path="/" element={<Navigate to="/student/login" replace />} />
       </Routes>
