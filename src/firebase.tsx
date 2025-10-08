@@ -3,7 +3,6 @@ import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
-
 const firebaseConfig = {
   apiKey: "AIzaSyDI5dSLH_jZ0ISzGfeaZjEKOQgFiW12PVM",
   authDomain: "fullstack-sveltekit.firebaseapp.com",
