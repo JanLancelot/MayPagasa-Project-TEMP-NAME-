@@ -5,9 +5,9 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  Eye,
   MapPin,
   Clock,
+  X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -44,7 +44,10 @@ export function ReportVerification() {
     fetchData();
   }, []);
 
-  const handleStatusChange = async (reportId: string, newStatus: "approved" | "rejected") => {
+  const handleStatusChange = async (
+    reportId: string,
+    newStatus: "approved" | "rejected" | "resolved"
+  ) => {
     const reportRef = doc(db, "reports", reportId);
     await updateDoc(reportRef, { status: newStatus });
     setReports((prev) =>
@@ -61,25 +64,30 @@ export function ReportVerification() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="">
+      <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Report Verification</h1>
         <p className="text-gray-500">Review, approve, or reject submitted reports</p>
-        <p className="text-red-500">Don't use the approve/reject button, I'll clarify this later | will also fix and improve design responsiveness later</p>
       </div>
 
       <div className="bg-white rounded-xl shadow divide-y divide-gray-100">
         {reports.length > 0 ? (
           reports.map((r) => (
-            <div key={r.id} className="p-4 flex gap-4 items-start">
+            <div
+              key={r.id}
+              onClick={() => setSelectedReport(r)}
+              className="p-4 flex flex-col sm:flex-row gap-4 items-start hover:bg-gray-50 cursor-pointer transition-colors"
+            >
               {r.imageUrl && (
                 <img
                   src={r.imageUrl}
                   alt={r.incidentType}
-                  className="w-24 h-24 object-cover rounded-md"
+                  className="w-full sm:w-24 h-40 sm:h-24 object-cover rounded-md"
                 />
               )}
-              <div className="flex-1">
+
+              <div className="flex-1 w-full">
                 <h3 className="font-semibold capitalize text-gray-800">
                   {r.incidentType}
                 </h3>
@@ -87,7 +95,7 @@ export function ReportVerification() {
                 <p className="text-sm text-gray-500 mb-1">
                   Reporter: <strong>{r.reporterInfo.fullName}</strong>
                 </p>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
                   <MapPin size={12} />
                   <span>
                     {[
@@ -110,13 +118,15 @@ export function ReportVerification() {
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-2 items-end">
+              <div className="flex sm:flex-col gap-2 items-end w-full sm:w-auto justify-between sm:justify-end">
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded-full ${
                     r.status === "approved"
                       ? "bg-green-100 text-green-800"
                       : r.status === "rejected"
                       ? "bg-red-100 text-red-800"
+                      : r.status === "resolved"
+                      ? "bg-blue-100 text-blue-800"
                       : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
@@ -125,28 +135,31 @@ export function ReportVerification() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSelectedReport(r)}
-                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
-                  >
-                    <Eye size={14} /> View
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange(r.id, "approved")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusChange(r.id, "approved");
+                    }}
                     className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-800 rounded flex items-center gap-1"
                   >
                     <CheckCircle size={14} /> Approve
                   </button>
                   <button
-                    onClick={() => handleStatusChange(r.id, "rejected")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusChange(r.id, "rejected");
+                    }}
                     className="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded flex items-center gap-1"
                   >
                     <XCircle size={14} /> Reject
                   </button>
-                                    <button
-                    onClick={() => handleStatusChange(r.id, "resolved")}
-                    className="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded flex items-center gap-1"
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusChange(r.id, "resolved");
+                    }}
+                    className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded flex items-center gap-1"
                   >
-                    <XCircle size={14} /> Resolved
+                    Resolved
                   </button>
                 </div>
               </div>
@@ -157,15 +170,17 @@ export function ReportVerification() {
         )}
       </div>
 
-      {/* Details Modal */}
+
+      </div>
+      {/* Details Moodal */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2">
+          <div className="relative bg-white rounded-xl shadow-lg max-w-3xl w-full p-6 overflow-y-auto max-h-[90vh]">
             <button
               onClick={() => setSelectedReport(null)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
             >
-              ✕
+              <X size={24} />
             </button>
             <h2 className="text-lg font-bold mb-2">
               {selectedReport.incidentType}
