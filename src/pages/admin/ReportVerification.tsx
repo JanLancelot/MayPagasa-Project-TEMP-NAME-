@@ -42,7 +42,6 @@ export function ReportVerification() {
         (doc) => ({ id: doc.id, ...doc.data() } as Report)
       );
 
-      // Sort by latest first
       reportsData.sort(
         (a, b) =>
           b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()
@@ -69,7 +68,6 @@ export function ReportVerification() {
     }
   };
 
-  // Pagination logic
   const indexOfLast = currentPage * reportsPerPage;
   const indexOfFirst = indexOfLast - reportsPerPage;
   const currentReports = reports.slice(indexOfFirst, indexOfLast);
@@ -225,11 +223,11 @@ export function ReportVerification() {
       {selectedReport && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2"
-          onClick={() => setSelectedReport(null)} // close on background click
+          onClick={() => setSelectedReport(null)}
         >
           <div
             className="relative bg-white rounded-xl shadow-lg max-w-3xl w-full p-6 overflow-y-auto max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside modal
+            onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setSelectedReport(null)}
