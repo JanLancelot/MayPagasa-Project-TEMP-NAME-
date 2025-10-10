@@ -101,8 +101,9 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div>
+      <div className="space-y-8">
+        {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
         <p className="text-gray-500">System overview & recent reports</p>
@@ -318,6 +319,8 @@ export function AdminDashboard() {
           </MapContainer>
         </div>
       )}
+      </div>
+      
       {/* Modal for Report Details */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2">

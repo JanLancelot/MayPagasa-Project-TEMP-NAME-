@@ -64,7 +64,7 @@ export function ReportVerification() {
   }
 
   return (
-    <div className="">
+    <div>
       <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Report Verification</h1>
