@@ -1,9 +1,34 @@
+import React from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Clock } from "lucide-react";
 import HeatmapLayer from "./HeatmapLayer";
 
-const SpatialHeatmapCard = ({
+interface TypeStats {
+    [key: string]: {
+        total: number;
+        [key: string]: any;
+    };
+}
+
+interface Incident {
+    [key: string]: any;
+}
+
+interface SpatialHeatmapCardProps {
+    incidentTypes?: string[];
+    typeStats?: TypeStats;
+    selectedType: string;
+    selectedStatus: string;
+    setSelectedType: (type: string) => void;
+    setSelectedStatus: (status: string) => void;
+    filteredIncidents?: Incident[];
+    heatmapPoints?: [number, number, number?][];
+    gradient?: { [key: number]: string };
+    loading: boolean;
+}
+
+const SpatialHeatmapCard: React.FC<SpatialHeatmapCardProps> = ({
     incidentTypes = [],
     typeStats = {},
     selectedType,
@@ -18,15 +43,12 @@ const SpatialHeatmapCard = ({
     return (
         <div className="bg-white rounded-lg shadow p-6">
             <div className="mb-4">
-                {/* Header */}
                 <div className="flex items-center gap-2 mb-4">
                     <MapPin className="text-gray-600" size={24} />
                     <h2 className="text-xl font-semibold text-gray-900">
                         Spatial Distribution Heatmap
                     </h2>
                 </div>
-
-                {/* Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -45,7 +67,6 @@ const SpatialHeatmapCard = ({
                             ))}
                         </select>
                     </div>
-
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Filter by Status
@@ -61,15 +82,11 @@ const SpatialHeatmapCard = ({
                         </select>
                     </div>
                 </div>
-
-                {/* Incident Count */}
                 <div className="text-sm text-gray-600 mb-2">
                     Showing: {filteredIncidents.length} incident
                     {filteredIncidents.length !== 1 ? "s" : ""}
                 </div>
             </div>
-
-            {/* Map */}
             <div className="w-full h-96 rounded-lg overflow-hidden border relative">
                 {loading && (
                     <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center z-10">
@@ -77,7 +94,6 @@ const SpatialHeatmapCard = ({
                         <p>Loading incidents...</p>
                     </div>
                 )}
-
                 <MapContainer
                     center={[14.84, 120.95]}
                     zoom={12}

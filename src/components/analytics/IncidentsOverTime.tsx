@@ -1,4 +1,31 @@
-const IncidentsOverTime = ({
+import React from 'react';
+
+interface DataPoint {
+    date: string;
+    rollingAvg: number;
+    [key: string]: number | string;
+}
+
+interface TypeStats {
+    [key: string]: {
+        total: number;
+        [key: string]: any;
+    };
+}
+
+interface IncidentsOverTimeProps {
+    dataWithRollingAvg: DataPoint[];
+    incidentTypes: string[];
+    maxValue: number;
+    getTypeColor: (type: string) => string;
+    hoveredType: string | null;
+    setHoveredType: (type: string | null) => void;
+    typeStats: TypeStats;
+    timeRange: string;
+    setTimeRange: (range: string) => void;
+}
+
+const IncidentsOverTime: React.FC<IncidentsOverTimeProps> = ({
     dataWithRollingAvg,
     incidentTypes,
     maxValue,
@@ -29,22 +56,22 @@ const IncidentsOverTime = ({
                 {dataWithRollingAvg.length > 0 ? (
                     <>
                         <div className="relative" style={{ height: '400px' }}>
-                            <svg width="100%" height="100%" className="overflow-visible">
+                            <svg width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="none" className="overflow-visible">
                                 {/* Y-axis */}
                                 {[0, 1, 2, 3, 4].map(i => {
                                     const value = Math.round((maxValue * (4 - i)) / 4);
-                                    const y = (i * 100) / 4;
+                                    const y = i * 100;
                                     return (
                                         <g key={i}>
                                             <line
-                                                x1="40"
-                                                y1={`${y}%`}
-                                                x2="100%"
-                                                y2={`${y}%`}
+                                                x1="60"
+                                                y1={y}
+                                                x2="780"
+                                                y2={y}
                                                 stroke="#e5e7eb"
                                                 strokeWidth="1"
                                             />
-                                            <text x="5" y={`${y}%`} dy="4" fontSize="12" fill="#6b7280">
+                                            <text x="5" y={y} dy="4" fontSize="12" fill="#6b7280">
                                                 {value}
                                             </text>
                                         </g>
@@ -55,8 +82,8 @@ const IncidentsOverTime = ({
                                 {incidentTypes.map(type => {
                                     const points = dataWithRollingAvg
                                         .map((d, i) => {
-                                            const x = 50 + ((i / (dataWithRollingAvg.length - 1)) * (100 - 60));
-                                            const y = 100 - ((d[type] || 0) / maxValue) * 95;
+                                            const x = 60 + ((i / (dataWithRollingAvg.length - 1)) * 720);
+                                            const y = 380 - ((Number(d[type]) || 0) / maxValue) * 360;
                                             return `${x},${y}`;
                                         })
                                         .join(' ');
@@ -78,8 +105,8 @@ const IncidentsOverTime = ({
                                 <polyline
                                     points={dataWithRollingAvg
                                         .map((d, i) => {
-                                            const x = 50 + ((i / (dataWithRollingAvg.length - 1)) * (100 - 60));
-                                            const y = 100 - (d.rollingAvg / maxValue) * 95;
+                                            const x = 60 + ((i / (dataWithRollingAvg.length - 1)) * 720);
+                                            const y = 380 - (d.rollingAvg / maxValue) * 360;
                                             return `${x},${y}`;
                                         })
                                         .join(' ')}

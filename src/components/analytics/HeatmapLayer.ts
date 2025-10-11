@@ -4,9 +4,37 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import 'leaflet.heat';
 
-const HeatmapLayer = ({ points, gradient }) => {
+declare module 'leaflet' {
+    interface HeatLayerOptions {
+        minOpacity?: number;
+        maxZoom?: number;
+        max?: number;
+        radius?: number;
+        blur?: number;
+        gradient?: { [key: number]: string };
+    }
+
+    interface HeatLayer extends Layer {
+        setLatLngs(latlngs: Array<[number, number, number?]>): this;
+        addLatLng(latlng: [number, number, number?]): this;
+        setOptions(options: HeatLayerOptions): this;
+        redraw(): this;
+    }
+
+    function heatLayer(
+        latlngs: Array<[number, number, number?]>,
+        options?: HeatLayerOptions
+    ): HeatLayer;
+}
+
+interface HeatmapLayerProps {
+    points: [number, number, number?][];
+    gradient?: { [key: number]: string };
+}
+
+const HeatmapLayer = ({ points, gradient }: HeatmapLayerProps) => {
     const map = useMap();
-    const heatLayerRef = useRef(null);
+    const heatLayerRef = useRef<L.HeatLayer | null>(null);
 
     useEffect(() => {
         if (!map || !points || points.length === 0) {
@@ -17,13 +45,11 @@ const HeatmapLayer = ({ points, gradient }) => {
             return;
         }
 
-        // Remove existing heat layer
         if (heatLayerRef.current) {
             map.removeLayer(heatLayerRef.current);
             heatLayerRef.current = null;
         }
 
-        // Create new heat layer
         try {
             const heatLayer = L.heatLayer(points, {
                 radius: 25,
@@ -35,7 +61,6 @@ const HeatmapLayer = ({ points, gradient }) => {
             heatLayer.addTo(map);
             heatLayerRef.current = heatLayer;
 
-            // Fit bounds to show all points
             const bounds = L.latLngBounds(points.map(([lat, lng]) => [lat, lng]));
             map.fitBounds(bounds, { padding: [50, 50] });
         } catch (err) {
