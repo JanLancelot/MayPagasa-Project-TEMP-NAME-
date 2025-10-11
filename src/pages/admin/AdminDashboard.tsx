@@ -101,8 +101,9 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div>
+      <div className="space-y-8">
+        {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
         <p className="text-gray-500">System overview & recent reports</p>
@@ -318,52 +319,57 @@ export function AdminDashboard() {
           </MapContainer>
         </div>
       )}
+      </div>
+      
       {/* Modal for Report Details */}
       {selectedReport && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="relative bg-white rounded-xl shadow-lg max-w-3xl w-full p-6 overflow-y-auto max-h-[90vh]">
-      {/* Close button (top-right) */}
-      <button
-        onClick={() => setSelectedReport(null)}
-        className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-      >
-        <X size={24} />
-      </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2">
+          <div className="relative bg-white rounded-xl shadow-lg max-w-3xl w-full p-6 overflow-y-auto max-h-[90vh]">
+            {/* Close button (top-right) */}
+            <button
+              onClick={() => setSelectedReport(null)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
 
-      <h2 className="text-xl font-bold mb-4 capitalize">
-        {selectedReport.incidentType}
-      </h2>
+            <h2 className="text-xl font-bold mb-4 capitalize">
+              {selectedReport.incidentType}
+            </h2>
 
-      {selectedReport.imageUrl && (
-        <img
-          src={selectedReport.imageUrl}
-          alt={selectedReport.incidentType}
-          className="w-full max-h-[500px] object-contain rounded-md mb-4"
-        />
+            {selectedReport.imageUrl && (
+              <img
+                src={selectedReport.imageUrl}
+                alt={selectedReport.incidentType}
+                className="w-full max-h-[500px] object-contain rounded-md mb-4"
+              />
+            )}
+
+            <p className="text-gray-700 mb-2">{selectedReport.description}</p>
+            <p className="text-sm text-gray-500 mb-1">
+              Reported by:{" "}
+              <span className="font-medium">
+                {selectedReport.reporterInfo.fullName}
+              </span>
+            </p>
+            <p className="text-sm text-gray-500 mb-1">
+              Location:{" "}
+              {[
+                selectedReport.reporterInfo.address.barangay,
+                selectedReport.reporterInfo.address.city,
+                selectedReport.reporterInfo.address.province,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+            <p className="text-sm text-gray-500">
+              {formatDistanceToNow(selectedReport.createdAt.toDate(), {
+                addSuffix: true,
+              })}
+            </p>
+          </div>
+        </div>
       )}
-
-      <p className="text-gray-700 mb-2">{selectedReport.description}</p>
-      <p className="text-sm text-gray-500 mb-1">
-        Reported by:{" "}
-        <span className="font-medium">{selectedReport.reporterInfo.fullName}</span>
-      </p>
-      <p className="text-sm text-gray-500 mb-1">
-        Location:{" "}
-        {[
-          selectedReport.reporterInfo.address.barangay,
-          selectedReport.reporterInfo.address.city,
-          selectedReport.reporterInfo.address.province,
-        ]
-          .filter(Boolean)
-          .join(", ")}
-      </p>
-      <p className="text-sm text-gray-500">
-        {formatDistanceToNow(selectedReport.createdAt.toDate(), { addSuffix: true })}
-      </p>
-    </div>
-  </div>
-)}
-
     </div>
   );
 }
