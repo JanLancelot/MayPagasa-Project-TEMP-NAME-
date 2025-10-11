@@ -9,6 +9,8 @@ import IncidentsOverTime from '@/components/analytics/IncidentsOverTime';
 import { DateRangeFilter } from '@/components/analytics/DateRangeFilter';
 import ExportMenu from '@/components/analytics/ExportMenu';
 import StatCard, { ForecastCard, PeakTimeCard } from '@/components/analytics/StatCard';
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 interface Location {
     lat: number;
@@ -411,6 +413,39 @@ ${dataWithRollingAvg.slice(-10).map(d =>
         downloadFile(JSON.stringify(exportData, null, 2), `analytics-data-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
     };
 
+    const exportToExcel = () => {
+        if (!dateFilteredIncidents || dateFilteredIncidents.length === 0) return;
+
+        const data = dateFilteredIncidents.map((inc) => {
+            const createdAt = new Date(inc.createdAt);
+            const resolvedAt = inc.resolvedAt ? new Date(inc.resolvedAt) : null;
+            const responseTime = resolvedAt
+                ? ((resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60)).toFixed(1)
+                : "N/A";
+
+            return {
+                ID: inc.id,
+                Date: createdAt.toISOString(),
+                Type: inc.incidentType,
+                Status: inc.status,
+                Latitude: inc.location.lat,
+                Longitude: inc.location.lng,
+                Description: inc.description,
+                "Response Time (hours)": responseTime
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Incidents");
+
+        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+        const blob = new Blob([excelBuffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+        saveAs(blob, `incident-report-${new Date().toISOString().split("T")[0]}.xlsx`);
+    };
+
     const downloadFile = (content: string, filename: string, type: string) => {
         const blob = new Blob([content], { type });
         const url = URL.createObjectURL(blob);
@@ -463,6 +498,7 @@ ${dataWithRollingAvg.slice(-10).map(d =>
                             onExportCSV={exportToCSV}
                             onExportSummary={exportSummaryReport}
                             onExportJSON={exportToJSON}
+                            onExportExcel={exportToExcel}
                         />
                     </div>
                 </div>
