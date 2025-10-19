@@ -161,37 +161,37 @@ export function UserManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2 md:space-y-6 px-2 md:px-0">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">User Management</h1>
-        <p className="text-gray-500">Search, review profiles, and manage bans</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">User Management</h1>
+        <p className="text-sm md:text-base text-gray-500">Search, review profiles, and manage bans</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow p-4 flex items-center gap-3">
-          <UsersIcon className="text-blue-600" />
-          <div>
-            <p className="text-gray-500 text-sm">Total Users</p>
-            <h3 className="text-xl font-bold">{totalUsers}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+        <div className="bg-white rounded-xl shadow p-3 md:p-4 flex items-center gap-3 min-w-0">
+          <UsersIcon className="text-blue-600 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-gray-500 text-sm truncate">Total Users</p>
+            <h3 className="text-lg md:text-xl font-bold">{totalUsers}</h3>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow p-4 flex items-center gap-3">
-          <CheckCircle className="text-green-600" />
-          <div>
-            <p className="text-gray-500 text-sm">Active</p>
-            <h3 className="text-xl font-bold">{activeUsers}</h3>
+        <div className="bg-white rounded-xl shadow p-3 md:p-4 flex items-center gap-3 min-w-0">
+          <CheckCircle className="text-green-600 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-gray-500 text-sm truncate">Active</p>
+            <h3 className="text-lg md:text-xl font-bold">{activeUsers}</h3>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow p-4 flex items-center gap-3">
-          <ShieldOff className="text-red-600" />
-          <div>
-            <p className="text-gray-500 text-sm">Banned</p>
-            <h3 className="text-xl font-bold">{bannedUsers}</h3>
+        <div className="bg-white rounded-xl shadow p-3 md:p-4 flex items-center gap-3 min-w-0">
+          <ShieldOff className="text-red-600 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-gray-500 text-sm truncate">Banned</p>
+            <h3 className="text-lg md:text-xl font-bold">{bannedUsers}</h3>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow p-4">
+      <div className="bg-white rounded-xl shadow p-3 md:p-4">
         <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-4">
           <div className="flex-1 relative">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -199,7 +199,7 @@ export function UserManagement() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email, student ID, or barangay"
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
             />
           </div>
           <div className="w-full md:w-64 relative">
@@ -207,7 +207,7 @@ export function UserManagement() {
             <select
               value={barangayFilter}
               onChange={(e) => setBarangayFilter(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-white"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-sm md:text-base"
             >
               <option value="all">All Cities/Municipalities</option>
               {barangayOptions.map((b) => (
@@ -217,51 +217,55 @@ export function UserManagement() {
           </div>
         </div>
 
-        <div className="overflow-x-auto -mx-2 md:mx-0">
+        <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barangay</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barangay</th>
+                <th className="px-2 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-2 md:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500">No users found.</td>
+                  <td colSpan={6} className="px-2 md:px-4 py-6 text-center text-gray-500">No users found.</td>
                 </tr>
               ) : (
                 filtered.map((u) => (
                   <tr key={u.uid} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-800">{u.fullName || "Unknown"}</div>
+                    <td className="px-2 md:px-4 py-3">
+                      <div className="font-medium text-gray-800 text-sm md:text-base">{u.fullName || "Unknown"}</div>
                       <div className="text-xs text-gray-500">{u.address?.city || ""}{u.address?.city && u.address?.province ? ", " : ""}{u.address?.province || ""}</div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{u.email}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{u.studentId}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{u.address?.barangay || ""}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 md:px-4 py-3 text-xs md:text-sm text-gray-700">{u.email}</td>
+                    <td className="px-2 md:px-4 py-3 text-xs md:text-sm text-gray-700">{u.studentId}</td>
+                    <td className="px-2 md:px-4 py-3 text-xs md:text-sm text-gray-700">{u.address?.barangay || ""}</td>
+                    <td className="px-2 md:px-4 py-3">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${u.banned ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}>
                         {u.banned ? "Banned" : "Active"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-2 md:px-4 py-3">
+                      <div className="flex justify-end gap-1 md:gap-2">
                         <button
                           onClick={() => openProfile(u)}
-                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 rounded flex items-center gap-1"
+                          className="px-1 md:px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 rounded flex items-center gap-1"
                         >
-                          <Eye size={14} /> Profile
+                          <Eye size={12} className="md:hidden" />
+                          <Eye size={14} className="hidden md:block" />
+                          <span className="hidden sm:inline">Profile</span>
                         </button>
                         <button
                           onClick={() => requestBanToggle(u)}
-                          className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${u.banned ? "bg-green-100 hover:bg-green-200 text-green-800" : "bg-red-100 hover:bg-red-200 text-red-800"}`}
+                          className={`px-1 md:px-2 py-1 text-xs rounded flex items-center gap-1 ${u.banned ? "bg-green-100 hover:bg-green-200 text-green-800" : "bg-red-100 hover:bg-red-200 text-red-800"}`}
                         >
-                          {u.banned ? <CheckCircle size={14} /> : <ShieldOff size={14} />} {u.banned ? "Unban" : "Ban"}
+                          {u.banned ? <CheckCircle size={12} className="md:hidden" /> : <ShieldOff size={12} className="md:hidden" />}
+                          {u.banned ? <CheckCircle size={14} className="hidden md:block" /> : <ShieldOff size={14} className="hidden md:block" />}
+                          <span className="hidden sm:inline">{u.banned ? "Unban" : "Ban"}</span>
                         </button>
                       </div>
                     </td>
